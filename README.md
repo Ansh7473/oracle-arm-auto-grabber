@@ -1,6 +1,9 @@
 # Oracle Cloud Always-Free ARM Instance Auto-Grabber v2.0
 
-An automated, production-ready Python tool built to continuously request and claim Oracle Cloud Always Free **Ampere A1 Compute Instances** (`VM.Standard.A1.Flex`) in high-demand regions (e.g. Hyderabad, Mumbai, Ashburn, Tokyo) as soon as host capacity opens up.
+An automated, production-ready Python tool designed to solve Oracle Cloud's persistent **"Out of Host Capacity"** (HTTP 500 / HTTP 429) errors. It continuously requests and claims Always Free **Ampere A1 Compute Instances** (`VM.Standard.A1.Flex`) in high-demand regions (e.g. Hyderabad, Mumbai, Ashburn, Tokyo) the instant server capacity becomes available.
+
+### ❓ Why This Script Is Needed
+Oracle Cloud's Always Free ARM Ampere servers are extremely popular, resulting in continuous **Out of Host Capacity** errors when attempting to create instances manually via the Web Console. This auto-grabber runs 24/7 in the background with adaptive backoff to capture open capacity as soon as another user releases resources or Oracle provisions new hardware.
 
 ---
 
