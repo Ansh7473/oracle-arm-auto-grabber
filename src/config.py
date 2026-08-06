@@ -29,7 +29,7 @@ class Config:
         ads_raw = os.getenv("AVAILABILITY_DOMAINS", "")
         ads = [ad.strip() for ad in ads_raw.split(",") if ad.strip()]
 
-        display_name = os.getenv("DISPLAY_NAME", "instance-arm-node")
+        display_name = os.getenv("DISPLAY_NAME", "freebaka1122332")
         compartment_id = os.getenv("COMPARTMENT_ID", "")
         subnet_id = os.getenv("SUBNET_ID", "")
         ssh_keys = os.getenv("SSH_AUTHORIZED_KEYS", "")
