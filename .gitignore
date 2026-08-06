@@ -1,0 +1,15 @@
+.env
+*.pem
+*key*
+*.txt
+!requirements.txt
+__pycache__/
+*.pyc
+venv/
+.idea/
+.vscode/
+vps/
+scripts/
+bot.py
+check_limits*.py
+setup_py_env.sh
