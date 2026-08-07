@@ -15,6 +15,8 @@ class Config:
     ocpus: int
     memory_in_gbs: int
     minimum_time_interval: int
+    max_allowed_ocpus: int
+    max_allowed_memory_gb: int
     bot_token: Optional[str]
     uid: Optional[str]
     oci_config_file: str
@@ -41,6 +43,9 @@ class Config:
         ocpus = int(os.getenv("OCPUS", "1"))
         memory_gb = int(os.getenv("MEMORY_IN_GBS", "6"))
         min_interval = int(os.getenv("MINIMUM_TIME_INTERVAL", "35"))
+        
+        max_ocpus = int(os.getenv("MAX_ALLOWED_OCPUS", "4"))
+        max_mem = int(os.getenv("MAX_ALLOWED_MEMORY_GB", "24"))
 
         bot_token = os.getenv("BOT_TOKEN")
         uid = os.getenv("UID")
@@ -58,6 +63,8 @@ class Config:
             ocpus=ocpus,
             memory_in_gbs=memory_gb,
             minimum_time_interval=min_interval,
+            max_allowed_ocpus=max_ocpus,
+            max_allowed_memory_gb=max_mem,
             bot_token=bot_token if bot_token and bot_token != "xxxx" else None,
             uid=uid if uid and uid != "xxxx" else None,
             oci_config_file=config_file

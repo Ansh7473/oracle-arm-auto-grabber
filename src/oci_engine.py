@@ -84,14 +84,14 @@ class OCIEngine:
                     used_memory += int(inst.shape_config.memory_in_gbs)
 
         logging.info(
-            f"Account ARM Usage: {used_ocpus}/4 OCPUs, {used_memory}/24 GB RAM. "
-            f"Free Capacity: {4 - used_ocpus} OCPUs, {24 - used_memory} GB RAM."
+            f"Account ARM Usage: {used_ocpus}/{self.cfg.max_allowed_ocpus} OCPUs, {used_memory}/{self.cfg.max_allowed_memory_gb} GB RAM. "
+            f"Free Capacity: {self.cfg.max_allowed_ocpus - used_ocpus} OCPUs, {self.cfg.max_allowed_memory_gb - used_memory} GB RAM."
         )
 
-        if used_ocpus + self.cfg.ocpus > 4 or used_memory + self.cfg.memory_in_gbs > 24:
+        if used_ocpus + self.cfg.ocpus > self.cfg.max_allowed_ocpus or used_memory + self.cfg.memory_in_gbs > self.cfg.max_allowed_memory_gb:
             logging.critical(
-                f"Always-Free ARM Limit Exceeded: Requested {self.cfg.ocpus} OCPU / {self.cfg.memory_in_gbs} GB RAM, "
-                f"but account is already using {used_ocpus} OCPU / {used_memory} GB RAM. Stopping."
+                f"ARM Quota Limit Exceeded: Requested {self.cfg.ocpus} OCPU / {self.cfg.memory_in_gbs} GB RAM, "
+                f"but account is using {used_ocpus}/{self.cfg.max_allowed_ocpus} OCPUs and {used_memory}/{self.cfg.max_allowed_memory_gb} GB RAM. Stopping."
             )
             sys.exit(1)
 
