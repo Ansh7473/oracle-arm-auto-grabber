@@ -31,7 +31,7 @@ def setup_logging():
 def main():
     setup_logging()
     logging.info("=====================================================")
-    logging.info("   OCI ARM Instance Auto-Grabber Engine v2.3")
+    logging.info("   OCI ARM Instance Auto-Grabber Engine v2.4")
     logging.info("=====================================================")
 
     cfg = Config.from_env()
@@ -52,7 +52,7 @@ def main():
     j_count = 0
     
     image_list = cfg.image_ids
-    # Persistent retry token preserved across network timeouts for true idempotency
+    # Generate initial retry_token
     retry_token = str(uuid.uuid4())
 
     while True:
@@ -78,6 +78,9 @@ def main():
                 sys.exit(0)
 
             except oci.exceptions.ServiceError as err:
+                # Oracle returned an explicit API response, so no VM was created. Generate fresh retry_token for next request attempt.
+                retry_token = str(uuid.uuid4())
+
                 err_msg_lower = (err.message or "").lower()
                 err_code_lower = (err.code or "").lower()
                 is_capacity_error = (
@@ -138,9 +141,10 @@ def main():
                 time.sleep(sleep_duration)
 
             except Exception as ex:
+                # Network/connection timeout occurred: reuse the existing retry_token to guarantee idempotency!
                 jitter = random.uniform(2, 8)
                 sleep_duration = wait_time + jitter
-                logging.error(f"Attempt #{retry_count} [{ad}] - Unexpected Error: {ex} | Retrying in {sleep_duration:.1f}s")
+                logging.error(f"Attempt #{retry_count} [{ad}] - Transport/Network Error: {ex} (reusing opc_retry_token for safety) | Retrying in {sleep_duration:.1f}s")
                 time.sleep(sleep_duration)
 
             except KeyboardInterrupt:
