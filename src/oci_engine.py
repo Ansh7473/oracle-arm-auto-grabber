@@ -98,7 +98,7 @@ class OCIEngine:
 
         logging.info("Preflight checks passed! Target is fully within Always-Free limits.")
 
-    def launch_instance(self, availability_domain: str, image_id: str) -> Optional[str]:
+    def launch_instance(self, availability_domain: str, image_id: str, retry_token: Optional[str] = None) -> Optional[str]:
         source_details = oci.core.models.InstanceSourceViaImageDetails(
             source_type="image",
             image_id=image_id,
@@ -121,8 +121,10 @@ class OCIEngine:
             )
         )
 
-        # opc_retry_token ensures idempotency & prevents duplicate instances on network timeout
-        retry_token = str(uuid.uuid4())
+        # Re-use deterministic retry_token per launch session to guarantee idempotency across network timeouts
+        if not retry_token:
+            retry_token = str(uuid.uuid4())
+
         resp = self.compute_client.launch_instance(launch_details, opc_retry_token=retry_token)
         instance_id = resp.data.id
 

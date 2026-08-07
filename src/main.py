@@ -3,6 +3,7 @@ import os
 import random
 import sys
 import time
+import uuid
 import oci
 
 from src.config import Config
@@ -30,7 +31,7 @@ def setup_logging():
 def main():
     setup_logging()
     logging.info("=====================================================")
-    logging.info("   OCI ARM Instance Auto-Grabber Engine v2.2")
+    logging.info("   OCI ARM Instance Auto-Grabber Engine v2.3")
     logging.info("=====================================================")
 
     cfg = Config.from_env()
@@ -51,6 +52,8 @@ def main():
     j_count = 0
     
     image_list = cfg.image_ids
+    # Persistent retry token preserved across network timeouts for true idempotency
+    retry_token = str(uuid.uuid4())
 
     while True:
         for ad in cfg.availability_domains:
@@ -64,7 +67,7 @@ def main():
                 notifier.update_status(engine.cloud_name, engine.email, retry_count)
 
             try:
-                public_ip = engine.launch_instance(ad, current_image)
+                public_ip = engine.launch_instance(ad, current_image, retry_token=retry_token)
                 logging.info(f"🎉 SUCCESS! Created '{cfg.display_name}' in {ad}! IP: {public_ip}")
                 notifier.send_success_alert(
                     cloud_name=engine.cloud_name,
@@ -79,8 +82,8 @@ def main():
                 err_code_lower = (err.code or "").lower()
                 is_capacity_error = (
                     "out of host capacity" in err_msg_lower or 
-                    "outofcapacity" in err_code_lower or 
-                    "capacity" in err_msg_lower
+                    "outofhostcapacity" in err_code_lower or
+                    "outofcapacity" in err_code_lower
                 )
 
                 # 1. Fatal errors (Bad Parameter, Invalid Auth, Unauthorized, Bad Subnet/Image) -> Stop script
@@ -119,7 +122,7 @@ def main():
                     jitter = random.uniform(2, 8)
                     sleep_duration = wait_time + jitter
                     logging.info(
-                        f"Attempt #{retry_count} [{ad}] - Out of Capacity: {err.message} "
+                        f"Attempt #{retry_count} [{ad}] - Out of Host Capacity: {err.message} "
                         f"| Retrying in {sleep_duration:.1f}s"
                     )
 
