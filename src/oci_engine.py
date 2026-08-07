@@ -85,11 +85,14 @@ class OCIEngine:
 
         logging.info(
             f"Account ARM Usage: {used_ocpus}/4 OCPUs, {used_memory}/24 GB RAM. "
-            f"Free: {4 - used_ocpus} OCPUs, {24 - used_memory} GB RAM."
+            f"Free Capacity: {4 - used_ocpus} OCPUs, {24 - used_memory} GB RAM."
         )
 
         if used_ocpus + self.cfg.ocpus > 4 or used_memory + self.cfg.memory_in_gbs > 24:
-            logging.critical("Always-Free ARM limit exceeded (4 OCPUs / 24 GB RAM max). Stopping.")
+            logging.critical(
+                f"Always-Free ARM Limit Exceeded: Requested {self.cfg.ocpus} OCPU / {self.cfg.memory_in_gbs} GB RAM, "
+                f"but account is already using {used_ocpus} OCPU / {used_memory} GB RAM. Stopping."
+            )
             sys.exit(1)
 
         if self.cfg.display_name in existing_names:

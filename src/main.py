@@ -31,7 +31,7 @@ def setup_logging():
 def main():
     setup_logging()
     logging.info("=====================================================")
-    logging.info("   OCI ARM Instance Auto-Grabber Engine v2.4")
+    logging.info("   OCI ARM Instance Auto-Grabber Engine v2.5")
     logging.info("=====================================================")
 
     cfg = Config.from_env()
@@ -78,9 +78,6 @@ def main():
                 sys.exit(0)
 
             except oci.exceptions.ServiceError as err:
-                # Oracle returned an explicit API response, so no VM was created. Generate fresh retry_token for next request attempt.
-                retry_token = str(uuid.uuid4())
-
                 err_msg_lower = (err.message or "").lower()
                 err_code_lower = (err.code or "").lower()
                 is_capacity_error = (
@@ -88,6 +85,10 @@ def main():
                     "outofhostcapacity" in err_code_lower or
                     "outofcapacity" in err_code_lower
                 )
+
+                # Explicit API response (Capacity/RateLimit/4xx) -> Request reached Oracle API successfully, so refresh retry_token for next request attempt
+                if is_capacity_error or err.status in (400, 401, 403, 404, 429) or "invalidparameter" in err_code_lower:
+                    retry_token = str(uuid.uuid4())
 
                 # 1. Fatal errors (Bad Parameter, Invalid Auth, Unauthorized, Bad Subnet/Image) -> Stop script
                 if err.status in (400, 401, 403, 404) or "invalidparameter" in err_code_lower:
@@ -129,13 +130,13 @@ def main():
                         f"| Retrying in {sleep_duration:.1f}s"
                     )
 
-                # 4. Other 5xx or transient errors -> Retain wait_time + jitter
+                # 4. Unknown 5xx or transient errors -> Retain retry_token for safety & retry
                 else:
                     jitter = random.uniform(2, 8)
                     sleep_duration = wait_time + jitter
                     logging.warning(
-                        f"Attempt #{retry_count} [{ad}] - Transient OCI Error {err.status} [{err.code}]: {err.message} "
-                        f"| Retrying in {sleep_duration:.1f}s"
+                        f"Attempt #{retry_count} [{ad}] - Transient OCI Server Error {err.status} [{err.code}]: {err.message} "
+                        f"| Reusing token & retrying in {sleep_duration:.1f}s"
                     )
                 
                 time.sleep(sleep_duration)
