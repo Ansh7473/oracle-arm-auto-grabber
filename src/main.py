@@ -30,7 +30,7 @@ def setup_logging():
 def main():
     setup_logging()
     logging.info("=====================================================")
-    logging.info("   OCI ARM Instance Auto-Grabber Engine v2.1")
+    logging.info("   OCI ARM Instance Auto-Grabber Engine v2.2")
     logging.info("=====================================================")
 
     cfg = Config.from_env()
@@ -50,7 +50,7 @@ def main():
     wait_time = cfg.minimum_time_interval
     j_count = 0
     
-    image_list = cfg.image_ids if cfg.image_ids else ["xxxx"]
+    image_list = cfg.image_ids
 
     while True:
         for ad in cfg.availability_domains:
@@ -62,10 +62,6 @@ def main():
             if j_count >= 10:
                 j_count = 0
                 notifier.update_status(engine.cloud_name, engine.email, retry_count)
-
-            # Add random jitter between 2 to 8 seconds to prevent fixed-interval collisions
-            jitter = random.uniform(2, 8)
-            sleep_duration = wait_time + jitter
 
             try:
                 public_ip = engine.launch_instance(ad, current_image)
@@ -79,8 +75,16 @@ def main():
                 sys.exit(0)
 
             except oci.exceptions.ServiceError as err:
-                # 1. Fatal errors (Bad Parameter, Invalid Auth, Unauthorized) -> Stop script
-                if err.status in (400, 401, 403, 404) or "InvalidParameter" in err.code:
+                err_msg_lower = (err.message or "").lower()
+                err_code_lower = (err.code or "").lower()
+                is_capacity_error = (
+                    "out of host capacity" in err_msg_lower or 
+                    "outofcapacity" in err_code_lower or 
+                    "capacity" in err_msg_lower
+                )
+
+                # 1. Fatal errors (Bad Parameter, Invalid Auth, Unauthorized, Bad Subnet/Image) -> Stop script
+                if err.status in (400, 401, 403, 404) or "invalidparameter" in err_code_lower:
                     logging.critical(
                         f"FATAL OCI ERROR {err.status} [{err.code}]: {err.message}. "
                         f"Stopping script immediately to prevent continuous failure."
@@ -96,32 +100,43 @@ def main():
                             )
                         except Exception:
                             pass
-                    sys.exit(1)
+                    # Return exit code 0 on fatal stop so Systemd with Restart=on-failure will NOT continuously restart on fatal bad config
+                    sys.exit(0)
 
-                # 2. Rate Limited (429) -> Increase backoff
+                # 2. Rate Limited (429) -> Increase backoff time FIRST, then calculate sleep duration
                 elif err.status == 429:
                     wait_time = min(wait_time + 3, 60)
+                    jitter = random.uniform(2, 8)
+                    sleep_duration = wait_time + jitter
                     logging.info(
                         f"Attempt #{retry_count} [{ad}] - Rate Limited (429): {err.message} "
                         f"| Backoff Sleep: {sleep_duration:.1f}s"
                     )
 
-                # 3. Capacity Error (500 Out of host capacity) -> Retry with baseline interval
-                elif err.status == 500 or "out of host capacity" in err.message.lower() or "out of capacity" in err.message.lower():
+                # 3. Explicit Capacity Error -> Reset wait_time to minimum interval + jitter
+                elif is_capacity_error:
                     wait_time = cfg.minimum_time_interval
+                    jitter = random.uniform(2, 8)
+                    sleep_duration = wait_time + jitter
                     logging.info(
                         f"Attempt #{retry_count} [{ad}] - Out of Capacity: {err.message} "
                         f"| Retrying in {sleep_duration:.1f}s"
                     )
+
+                # 4. Other 5xx or transient errors -> Retain wait_time + jitter
                 else:
+                    jitter = random.uniform(2, 8)
+                    sleep_duration = wait_time + jitter
                     logging.warning(
-                        f"Attempt #{retry_count} [{ad}] - OCI Service Error {err.status} [{err.code}]: {err.message} "
+                        f"Attempt #{retry_count} [{ad}] - Transient OCI Error {err.status} [{err.code}]: {err.message} "
                         f"| Retrying in {sleep_duration:.1f}s"
                     )
                 
                 time.sleep(sleep_duration)
 
             except Exception as ex:
+                jitter = random.uniform(2, 8)
+                sleep_duration = wait_time + jitter
                 logging.error(f"Attempt #{retry_count} [{ad}] - Unexpected Error: {ex} | Retrying in {sleep_duration:.1f}s")
                 time.sleep(sleep_duration)
 

@@ -98,7 +98,7 @@ Type=simple
 User=ubuntu
 WorkingDirectory=/opt/oracle-python-grabber
 ExecStart=/opt/oracle-python-grabber/venv/bin/python3 -m src.main
-Restart=always
+Restart=on-failure
 RestartSec=10
 
 [Install]

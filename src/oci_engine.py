@@ -2,6 +2,7 @@ import logging
 import random
 import sys
 import time
+import uuid
 from typing import Optional, List
 
 import oci
@@ -34,6 +35,10 @@ class OCIEngine:
         
         if not self.cfg.availability_domains:
             logging.critical("No AVAILABILITY_DOMAINS configured in environment! Stopping.")
+            sys.exit(1)
+
+        if not self.cfg.image_ids or self.cfg.image_ids == ["xxxx"]:
+            logging.critical("No IMAGE_ID configured in environment! Stopping.")
             sys.exit(1)
 
         # 1. Storage check
@@ -116,7 +121,9 @@ class OCIEngine:
             )
         )
 
-        resp = self.compute_client.launch_instance(launch_details)
+        # opc_retry_token ensures idempotency & prevents duplicate instances on network timeout
+        retry_token = str(uuid.uuid4())
+        resp = self.compute_client.launch_instance(launch_details, opc_retry_token=retry_token)
         instance_id = resp.data.id
 
         # Fetch Public IP
