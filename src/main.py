@@ -31,7 +31,7 @@ def setup_logging():
 def main():
     setup_logging()
     logging.info("=====================================================")
-    logging.info("   OCI ARM Instance Auto-Grabber Engine v2.5")
+    logging.info("   OCI ARM Instance Auto-Grabber Engine v2.6")
     logging.info("=====================================================")
 
     cfg = Config.from_env()

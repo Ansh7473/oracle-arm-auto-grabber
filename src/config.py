@@ -44,8 +44,8 @@ class Config:
         memory_gb = int(os.getenv("MEMORY_IN_GBS", "6"))
         min_interval = int(os.getenv("MINIMUM_TIME_INTERVAL", "35"))
         
-        max_ocpus = int(os.getenv("MAX_ALLOWED_OCPUS", "4"))
-        max_mem = int(os.getenv("MAX_ALLOWED_MEMORY_GB", "24"))
+        max_ocpus = int(os.getenv("MAX_ALLOWED_OCPUS", "2"))
+        max_mem = int(os.getenv("MAX_ALLOWED_MEMORY_GB", "12"))
 
         bot_token = os.getenv("BOT_TOKEN")
         uid = os.getenv("UID")
