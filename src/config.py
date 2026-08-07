@@ -10,7 +10,7 @@ class Config:
     compartment_id: str
     subnet_id: str
     ssh_authorized_keys: str
-    image_id: str
+    image_ids: List[str]
     boot_volume_size_in_gbs: int
     ocpus: int
     memory_in_gbs: int
@@ -33,11 +33,13 @@ class Config:
         compartment_id = os.getenv("COMPARTMENT_ID", "")
         subnet_id = os.getenv("SUBNET_ID", "")
         ssh_keys = os.getenv("SSH_AUTHORIZED_KEYS", "")
-        image_id = os.getenv("IMAGE_ID", "")
+        
+        image_ids_raw = os.getenv("IMAGE_ID", "")
+        image_ids = [img.strip() for img in image_ids_raw.split(",") if img.strip()]
         
         boot_vol_size = int(os.getenv("BOOT_VOLUME_SIZE_IN_GBS", "100"))
-        ocpus = int(os.getenv("OCPUS", "2"))
-        memory_gb = int(os.getenv("MEMORY_IN_GBS", "12"))
+        ocpus = int(os.getenv("OCPUS", "1"))
+        memory_gb = int(os.getenv("MEMORY_IN_GBS", "6"))
         min_interval = int(os.getenv("MINIMUM_TIME_INTERVAL", "35"))
 
         bot_token = os.getenv("BOT_TOKEN")
@@ -51,7 +53,7 @@ class Config:
             compartment_id=compartment_id,
             subnet_id=subnet_id,
             ssh_authorized_keys=ssh_keys,
-            image_id=image_id,
+            image_ids=image_ids,
             boot_volume_size_in_gbs=boot_vol_size,
             ocpus=ocpus,
             memory_in_gbs=memory_gb,

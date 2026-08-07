@@ -1,4 +1,4 @@
-# Oracle Cloud Always-Free ARM Instance Auto-Grabber v2.0
+# Oracle Cloud Always-Free ARM Instance Auto-Grabber v2.1
 
 An automated, production-ready Python tool designed to solve Oracle Cloud's persistent **"Out of Host Capacity"** (HTTP 500 / HTTP 429) errors. It continuously requests and claims Always Free **Ampere A1 Compute Instances** (`VM.Standard.A1.Flex`) in high-demand regions (e.g. Hyderabad, Mumbai, Ashburn, Tokyo) the instant server capacity becomes available.
 
@@ -7,13 +7,16 @@ Oracle Cloud's Always Free ARM Ampere servers are extremely popular, resulting i
 
 ---
 
-## ⚡ Features
+## ⚡ Features & Improvements in v2.1
 
-- **Automated Retry Loop**: Automatically retries instance launch requests with intelligent backoff.
-- **Smart Adaptive Rate-Limiting**: Handles HTTP 429 throttling and HTTP 500 Out of Host Capacity errors without crashing.
-- **Preflight Quota Checks**: Verifies account Always-Free limits (4 OCPUs, 24 GB RAM, 200 GB Storage) before launching.
+- **Randomized Jitter (Anti-Collision)**: Adds random 2–8s jitter to retry intervals to prevent collision with other scripts.
+- **Smart Error Classification**:
+  - `Capacity (500)` -> Continuous retry.
+  - `Rate Limit (429)` -> Auto-increasing backoff.
+  - `Fatal Errors (400, 401, 403, 404, Bad Credentials)` -> Instantly stops and alerts via Telegram to prevent infinite looping on broken configs.
+- **Multi-Image Round-Robin Rotation**: Alternates between multiple image OCIDs (e.g. Oracle Linux 9.8 and Ubuntu 24.04 Minimal) on each retry attempt.
+- **Preflight Quota Checks**: Verifies account Always-Free limits (up to 4 OCPUs, 24 GB RAM, 200 GB Storage) before launching.
 - **Telegram Notifications**: Real-time Telegram alerts for startup, continuous status updates, and instant notifications upon successful instance minting.
-- **Automated Hourly Reports**: Optional cron job for sending the last 10 log entries directly to Telegram every hour.
 - **Systemd Service Integration**: Runs quietly 24/7 in the background on any Linux VPS or micro instance.
 
 ---
@@ -42,8 +45,8 @@ oci-arm-grabber/
 ### 1. Clone Repository & Setup Virtual Environment
 
 ```bash
-git clone https://github.com/Ansh7473/oracle-out-of-capacity-grabber.git
-cd oracle-out-of-capacity-grabber
+git clone https://github.com/Ansh7473/oracle-arm-auto-grabber.git
+cd oracle-arm-auto-grabber
 
 python3 -m venv venv
 source venv/bin/activate
@@ -63,7 +66,7 @@ Example `.env` configuration:
 
 ```env
 AVAILABILITY_DOMAINS=wrEQ:AP-HYDERABAD-1-AD-1
-DISPLAY_NAME=free-arm-12gb
+DISPLAY_NAME=your_instance_display_name_here
 COMPARTMENT_ID=ocid1.tenancy.oc1..aaaaaaaaxxxx
 SUBNET_ID=ocid1.subnet.oc1.ap-hyderabad-1.aaaaaaaaxxxx
 SSH_AUTHORIZED_KEYS=ssh-rsa AAAAB3NzaC1yc2E...
@@ -73,8 +76,8 @@ BOOT_VOLUME_SIZE_IN_GBS=100
 BOT_TOKEN=your_telegram_bot_token_here
 UID=your_telegram_chat_id_here
 
-OCPUS=2
-MEMORY_IN_GBS=12
+OCPUS=1
+MEMORY_IN_GBS=6
 MINIMUM_TIME_INTERVAL=35
 ```
 

@@ -1,6 +1,8 @@
 import logging
+import random
 import sys
 import time
+from typing import Optional, List
 
 import oci
 from src.config import Config
@@ -16,13 +18,24 @@ class OCIEngine:
         self.vcn_client = oci.core.VirtualNetworkClient(self.oci_config)
         self.volume_client = oci.core.BlockstorageClient(self.oci_config)
 
-        self.cloud_name = self.identity_client.get_tenancy(tenancy_id=config.compartment_id).data.name
-        users = self.identity_client.list_users(compartment_id=config.compartment_id).data
-        self.email = users[0].email if users else "N/A"
+        try:
+            self.cloud_name = self.identity_client.get_tenancy(tenancy_id=config.compartment_id).data.name
+        except Exception:
+            self.cloud_name = "OCI Account"
+            
+        try:
+            users = self.identity_client.list_users(compartment_id=config.compartment_id).data
+            self.email = users[0].email if users else "N/A"
+        except Exception:
+            self.email = "N/A"
 
     def run_preflight_checks(self):
         logging.info("Running storage & quota preflight checks...")
         
+        if not self.cfg.availability_domains:
+            logging.critical("No AVAILABILITY_DOMAINS configured in environment! Stopping.")
+            sys.exit(1)
+
         # 1. Storage check
         total_volume_gb = 0
         try:
@@ -47,7 +60,7 @@ class OCIEngine:
         free_storage = 200 - total_volume_gb
         if free_storage < self.cfg.boot_volume_size_in_gbs:
             logging.critical(
-                f"Storage Precheck Failed: Free storage is {free_storage} GB, "
+                f"Storage Precheck Failed: Free storage is {free_storage} GB out of 200 GB limit, "
                 f"but target requires {self.cfg.boot_volume_size_in_gbs} GB. Stopping."
             )
             sys.exit(1)
@@ -80,10 +93,10 @@ class OCIEngine:
 
         logging.info("Preflight checks passed! Target is fully within Always-Free limits.")
 
-    def launch_instance(self, availability_domain: str) -> Optional[str]:
+    def launch_instance(self, availability_domain: str, image_id: str) -> Optional[str]:
         source_details = oci.core.models.InstanceSourceViaImageDetails(
             source_type="image",
-            image_id=self.cfg.image_id,
+            image_id=image_id,
             boot_volume_size_in_gbs=self.cfg.boot_volume_size_in_gbs
         )
 
